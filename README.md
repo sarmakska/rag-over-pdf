@@ -1,12 +1,11 @@
 # RAG-over-PDF
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/github/license/sarmakska/rag-over-pdf)](LICENSE)
+[![Top language](https://img.shields.io/github/languages/top/sarmakska/rag-over-pdf)](https://github.com/sarmakska/rag-over-pdf)
+[![Last commit](https://img.shields.io/github/last-commit/sarmakska/rag-over-pdf)](https://github.com/sarmakska/rag-over-pdf/commits/main)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript&logoColor=white)](https://typescriptlang.org)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
-[![OpenAI](https://img.shields.io/badge/OpenAI-API-412991?logo=openai&logoColor=white)](https://platform.openai.com)
-[![Vercel](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel)](https://vercel.com)
-[![Open Source](https://img.shields.io/badge/Open_Source-%E2%9D%A4-red)](https://github.com/sarmakska/rag-over-pdf)
+[![Deploy](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel)](https://vercel.com)
 
 **A minimal, production-shaped RAG starter. Upload a PDF, ask questions, get cited answers.**
 
@@ -60,6 +59,26 @@ pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000), upload a PDF, ask a question.
+
+## What is in the box
+
+- **`app/api/upload`** parses a PDF with `pdf-parse`, chunks the text, embeds each chunk, and loads it into the vector store.
+- **`app/api/chat`** embeds the question, retrieves the top matching chunks, and streams a grounded answer token by token.
+- **`lib/chunker.ts`** fixed-size character chunker with overlap, configurable via env vars.
+- **`lib/vector-store.ts`** in-memory cosine-similarity index behind a three-method interface (`add`, `search`, `clear`). This is the one file you replace to move to a real database.
+- **`lib/openai.ts`** a lazily constructed OpenAI client plus the embedding helper, so `next build` runs without an API key.
+- **`app/page.tsx`** a minimal upload-and-ask UI built with Tailwind.
+- **`lib/rag.test.ts`** smoke tests for the chunker and vector store. No network, no key required.
+
+## When to use this / when not to
+
+Use this when you want to learn how retrieval-augmented generation actually works without a framework hiding the moving parts, when you are prototyping a documentation chatbot grounded in your own PDFs, or when you need a clean starting point you can extend into a production system.
+
+Do not use this as-is for a high-traffic production deployment. The in-memory store clears on restart and holds a single document at a time in the demo UI, there is no re-ranking, and chunking is fixed-size rather than structure-aware. Swap the vector store for pgvector or a managed index, add re-ranking, and harden the upload path before you put real load on it.
+
+## Documentation
+
+Full architecture notes, tuning guides, a pgvector migration path, and deployment recipes live in the [project wiki](https://github.com/sarmakska/rag-over-pdf/wiki).
 
 ## Tech stack
 
