@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { embed, openai, CHAT_MODEL } from '@/lib/openai'
+import { embed, getOpenAI, CHAT_MODEL } from '@/lib/openai'
 import { search, size } from '@/lib/vector-store'
 
 export const runtime = 'nodejs'
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       .map((c, i) => `[Chunk ${i + 1}]\n${c.content}`)
       .join('\n\n---\n\n')
 
-    const stream = await openai.chat.completions.create({
+    const stream = await getOpenAI().chat.completions.create({
       model: CHAT_MODEL,
       stream: true,
       temperature: 0.2,
