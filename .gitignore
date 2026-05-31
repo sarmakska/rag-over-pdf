@@ -27,3 +27,10 @@ next-env.d.ts
 
 # coverage
 coverage/
+
+# python tooling (fixture generation scripts may be run locally)
+__pycache__/
+.pytest_cache/
+
+# rust / native build output
+target/
