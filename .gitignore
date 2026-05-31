@@ -1,9 +1,29 @@
-node_modules
-.next
+# dependencies
+node_modules/
+
+# next.js build output
+.next/
+out/
+build/
+dist/
+
+# environment files
 .env
 .env.local
+.env*.local
+
+# logs
 *.log
+
+# editor / os
 .DS_Store
+
+# deploy
 .vercel
+
+# typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# coverage
+coverage/
