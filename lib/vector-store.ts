@@ -37,6 +37,30 @@ export interface DocumentSummary {
   pages: number
 }
 
+/** Per-source RRF weights. Equal weights reproduce plain RRF. */
+export interface HybridWeights {
+  /** Weight on the dense (embedding) ranking. */
+  dense: number
+  /** Weight on the BM25 (lexical) ranking. */
+  lexical: number
+}
+
+function parseWeight(value: string | undefined, fallback: number): number {
+  if (value === undefined) return fallback
+  const n = Number(value)
+  return Number.isFinite(n) && n >= 0 ? n : fallback
+}
+
+/**
+ * Default hybrid weights, read once from the environment. Leave both unset for
+ * plain (unweighted) RRF. Raise HYBRID_LEXICAL_WEIGHT on corpora full of exact
+ * identifiers, raise HYBRID_DENSE_WEIGHT on prose-heavy, paraphrase-rich ones.
+ */
+export const DEFAULT_HYBRID_WEIGHTS: HybridWeights = {
+  dense: parseWeight(process.env.HYBRID_DENSE_WEIGHT, 1),
+  lexical: parseWeight(process.env.HYBRID_LEXICAL_WEIGHT, 1),
+}
+
 const store: Chunk[] = []
 const bm25 = new Bm25Index()
 
@@ -100,12 +124,17 @@ export function search(queryEmbedding: number[], k = 5, docIds?: string[]): Scor
  * the two rankings with Reciprocal Rank Fusion. RRF needs no score
  * normalisation across the two very different score scales, which is why it is
  * the default fusion method for hybrid search.
+ *
+ * Fusion is weighted: each ranking contributes `weight / (C + rank)`. Equal
+ * weights (the default) reproduce plain RRF; tilt the weights to favour exact
+ * terms or paraphrase per corpus. See DEFAULT_HYBRID_WEIGHTS for the env knobs.
  */
 export function hybridSearch(
   queryEmbedding: number[],
   queryText: string,
   k = 5,
   docIds?: string[],
+  weights: HybridWeights = DEFAULT_HYBRID_WEIGHTS,
 ): ScoredChunk[] {
   const allowed = docIds && docIds.length ? new Set(docIds) : null
   const pool = Math.max(k * 4, 20)
@@ -127,8 +156,12 @@ export function hybridSearch(
   const byId = new Map<string, Chunk>()
   for (const c of store) byId.set(c.id, c)
 
-  for (const [id, rank] of denseRank) fused.set(id, (fused.get(id) || 0) + 1 / (C + rank))
-  for (const [id, rank] of lexRank) fused.set(id, (fused.get(id) || 0) + 1 / (C + rank))
+  for (const [id, rank] of denseRank) {
+    fused.set(id, (fused.get(id) || 0) + weights.dense / (C + rank))
+  }
+  for (const [id, rank] of lexRank) {
+    fused.set(id, (fused.get(id) || 0) + weights.lexical / (C + rank))
+  }
 
   const out: ScoredChunk[] = []
   for (const [id, score] of fused) {

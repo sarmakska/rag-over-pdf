@@ -77,6 +77,50 @@ test('hybrid search surfaces an exact lexical match a weak embedding would miss'
   clear()
 })
 
+test('weighted RRF can tilt fusion towards the lexical ranking', () => {
+  clear()
+  // a:1 holds the exact rare term but its embedding points away from the query,
+  // so the dense ranking buries it. a:0 is a strong dense match with no term.
+  add([
+    makeChunk('a:0', 'a', 'general background prose about the weather today', [1, 0, 0]),
+    makeChunk('a:1', 'a', 'the specific error code E1099 means a gateway timeout', [0, 0, 1]),
+    makeChunk('a:2', 'a', 'more unrelated filler content about gardens', [0.9, 0.1, 0]),
+  ])
+
+  // Heavy dense emphasis ranks the strong embedding match (a:0) above the
+  // exact-term chunk (a:1).
+  const denseHeavy = hybridSearch([1, 0, 0], 'E1099 timeout', 3, undefined, {
+    dense: 50,
+    lexical: 1,
+  })
+  const denseOrder = denseHeavy.map((h) => h.chunk.id)
+  assert.ok(denseOrder.indexOf('a:0') < denseOrder.indexOf('a:1'))
+
+  // Lexical emphasis promotes the chunk that actually contains the term to the
+  // very top.
+  const lexHeavy = hybridSearch([1, 0, 0], 'E1099 timeout', 3, undefined, {
+    dense: 1,
+    lexical: 5,
+  })
+  assert.equal(lexHeavy[0].chunk.id, 'a:1')
+  clear()
+})
+
+test('equal weights reproduce plain RRF ordering', () => {
+  clear()
+  add([
+    makeChunk('a:0', 'a', 'alpha alpha document', [1, 0, 0]),
+    makeChunk('a:1', 'a', 'beta document content', [0, 1, 0]),
+  ])
+  const plain = hybridSearch([1, 0, 0], 'alpha', 2)
+  const equal = hybridSearch([1, 0, 0], 'alpha', 2, undefined, { dense: 1, lexical: 1 })
+  assert.deepEqual(
+    plain.map((h) => h.chunk.id),
+    equal.map((h) => h.chunk.id),
+  )
+  clear()
+})
+
 test('clear(docId) removes only that document', () => {
   clear()
   add([makeChunk('a:0', 'a', 'one', [1, 0, 0]), makeChunk('b:0', 'b', 'two', [0, 1, 0])])
