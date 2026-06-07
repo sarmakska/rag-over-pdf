@@ -31,3 +31,32 @@ test('bm25 clear empties the index', () => {
   assert.equal(idx.size(), 0)
   assert.equal(idx.search('one', 5).length, 0)
 })
+
+test('bm25 weights repeated query terms in a document above a single mention', () => {
+  const idx = new Bm25Index()
+  idx.setCorpus([
+    'gateway gateway gateway timeout on the billing path',
+    'a single gateway mention buried in unrelated prose about gardens and weather',
+  ])
+  const hits = idx.search('gateway', 2)
+  assert.equal(hits[0].index, 0)
+})
+
+test('bm25 only returns documents that contain a query term', () => {
+  const idx = new Bm25Index()
+  idx.setCorpus(['apple banana', 'cherry date', 'apple elderberry'])
+  const hits = idx.search('apple', 5)
+  assert.equal(hits.length, 2)
+  assert.deepEqual(
+    hits.map((h) => h.index).sort(),
+    [0, 2],
+  )
+})
+
+test('bm25 re-set corpus replaces all prior postings', () => {
+  const idx = new Bm25Index()
+  idx.setCorpus(['first corpus alpha'])
+  idx.setCorpus(['second corpus beta'])
+  assert.equal(idx.search('alpha', 5).length, 0)
+  assert.equal(idx.search('beta', 5).length, 1)
+})
